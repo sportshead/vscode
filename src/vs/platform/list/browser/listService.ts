@@ -1118,6 +1118,11 @@ configurationRegistry.registerConfiguration({
 			'type': 'boolean',
 			'default': true,
 			markdownDescription: localize('automatic keyboard navigation setting', "Controls whether keyboard navigation in lists and trees is automatically triggered simply by typing. If set to `false`, keyboard navigation is only triggered when executing the `list.toggleKeyboardNavigation` command, for which you can assign a keyboard shortcut.")
+		},
+		'workbench.tree.onlyExpandOnTwistieClick': {
+			'type': 'boolean',
+			'default': false,
+			'description': localize('tree onlyExpandOnTwistieClick setting', 'Controls whether to only expand a directory when the twistie is clicked inside the file tree.')
 		}
 	}
 });

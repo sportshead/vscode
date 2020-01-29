@@ -1104,13 +1104,7 @@ class TreeNodeListMouseController<T, TFilterData, TRef> extends MouseController<
 			return super.onPointer(e);
 		}
 
-		let expandOnlyOnTwistieClick = false;
-
-		if (typeof this.tree.expandOnlyOnTwistieClick === 'function') {
-			expandOnlyOnTwistieClick = this.tree.expandOnlyOnTwistieClick(node.element);
-		} else {
-			expandOnlyOnTwistieClick = !!this.tree.expandOnlyOnTwistieClick;
-		}
+		let expandOnlyOnTwistieClick = /* workbench.tree.onlyExpandOnTwistieClick ||*/ false;
 
 		if (expandOnlyOnTwistieClick && !onTwistie) {
 			return super.onPointer(e);
