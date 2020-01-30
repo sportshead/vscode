@@ -143,7 +143,7 @@ function useSingleClickToOpen(configurationService: IConfigurationService): bool
 	return configurationService.getValue(openModeSettingKey) !== 'doubleClick';
 }
 
-function clickTwistieToOpen(configurationService: IConfigurationService): boolean {
+export function clickTwistieToOpen(configurationService: IConfigurationService): boolean {
 	return configurationService.getValue(treeTwistieExpandKey);
 }
 

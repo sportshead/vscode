@@ -7,7 +7,7 @@ import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { KeybindingsRegistry, KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { List } from 'vs/base/browser/ui/list/listWidget';
-import { WorkbenchListFocusContextKey, IListService, WorkbenchListSupportsMultiSelectContextKey, ListWidget, WorkbenchListHasSelectionOrFocus, getSelectionKeyboardEvent } from 'vs/platform/list/browser/listService';
+import { clickTwistieToOpen, WorkbenchListFocusContextKey, IListService, WorkbenchListSupportsMultiSelectContextKey, ListWidget, WorkbenchListHasSelectionOrFocus, getSelectionKeyboardEvent } from 'vs/platform/list/browser/listService';
 import { PagedList } from 'vs/base/browser/ui/list/listPaging';
 import { range } from 'vs/base/common/arrays';
 import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
@@ -18,6 +18,7 @@ import { DataTree } from 'vs/base/browser/ui/tree/dataTree';
 import { ITreeNode } from 'vs/base/browser/ui/tree/tree';
 import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 import { Tree } from 'vs/base/parts/tree/browser/treeImpl';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 function isLegacyTree(widget: ListWidget): widget is ITree {
 	return widget instanceof Tree;
@@ -625,6 +626,8 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 	},
 	handler: (accessor) => {
 		const focused = accessor.get(IListService).lastFocusedList;
+		let configurationService = accessor.get(IConfigurationService);
+		let twistie = clickTwistieToOpen(configurationService);
 
 		// List
 		if (focused instanceof List || focused instanceof PagedList) {
@@ -645,6 +648,8 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				if (list.expandOnlyOnTwistieClick === true) {
 					toggleCollapsed = false;
 				} else if (typeof list.expandOnlyOnTwistieClick !== 'boolean' && list.expandOnlyOnTwistieClick(focus[0])) {
+					toggleCollapsed = false;
+				} else if (twistie) {
 					toggleCollapsed = false;
 				}
 
