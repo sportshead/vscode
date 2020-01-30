@@ -46,6 +46,7 @@ export interface IControllerOptions {
 	clickBehavior?: ClickBehavior;
 	openMode?: OpenMode;
 	keyboardSupport?: boolean;
+	expandOnlyOnTwistieClick?: boolean;
 }
 
 interface IKeybindingDispatcherItem {
@@ -209,6 +210,10 @@ export class DefaultController implements _.IController {
 
 	protected setOpenMode(openMode: OpenMode) {
 		this.options.openMode = openMode;
+	}
+
+	protected setExpandOnlyOnTwistieClick(twistie: boolean) {
+		this.options.expandOnlyOnTwistieClick = twistie;
 	}
 
 	protected get openOnSingleClick(): boolean {

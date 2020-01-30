@@ -127,6 +127,7 @@ export const openModeSettingKey = 'workbench.list.openMode';
 export const horizontalScrollingKey = 'workbench.list.horizontalScrolling';
 export const keyboardNavigationSettingKey = 'workbench.list.keyboardNavigation';
 export const automaticKeyboardNavigationSettingKey = 'workbench.list.automaticKeyboardNavigation';
+export const treeTwistieExpandKey = 'workbench.list.expandOnlyOnTwistieClick';
 const treeIndentKey = 'workbench.tree.indent';
 const treeRenderIndentGuidesKey = 'workbench.tree.renderIndentGuides';
 
@@ -140,6 +141,10 @@ function useAltAsMultipleSelectionModifier(configurationService: IConfigurationS
 
 function useSingleClickToOpen(configurationService: IConfigurationService): boolean {
 	return configurationService.getValue(openModeSettingKey) !== 'doubleClick';
+}
+
+function clickTwistieToOpen(configurationService: IConfigurationService): boolean {
+	return configurationService.getValue(treeTwistieExpandKey);
 }
 
 class MultipleSelectionController<T> extends Disposable implements IMultipleSelectionController<T> {
@@ -176,11 +181,14 @@ class MultipleSelectionController<T> extends Disposable implements IMultipleSele
 
 class WorkbenchOpenController extends Disposable implements IOpenController {
 	private openOnSingleClick: boolean;
+	private openOnlyOnTwistieClick: boolean;
 
 	constructor(private configurationService: IConfigurationService, private existingOpenController?: IOpenController) {
 		super();
 
 		this.openOnSingleClick = useSingleClickToOpen(configurationService);
+
+		this.openOnlyOnTwistieClick = clickTwistieToOpen(configurationService);
 
 		this.registerListeners();
 	}
@@ -190,6 +198,9 @@ class WorkbenchOpenController extends Disposable implements IOpenController {
 			if (e.affectsConfiguration(openModeSettingKey)) {
 				this.openOnSingleClick = useSingleClickToOpen(this.configurationService);
 			}
+			if (e.affectsConfiguration(treeTwistieExpandKey)) {
+				this.openOnlyOnTwistieClick = clickTwistieToOpen(this.configurationService);
+			}
 		}));
 	}
 
@@ -197,7 +208,7 @@ class WorkbenchOpenController extends Disposable implements IOpenController {
 		if (event instanceof MouseEvent) {
 			const isLeftButton = event.button === 0;
 			const isDoubleClick = event.detail === 2;
-			if (isLeftButton && !this.openOnSingleClick && !isDoubleClick) {
+			if (isLeftButton && !this.openOnSingleClick && !isDoubleClick && this.openOnlyOnTwistieClick) {
 				return false;
 			}
 
@@ -439,6 +450,7 @@ export class WorkbenchTree extends Tree {
 	private listMultiSelection: IContextKey<boolean>;
 
 	private _openOnSingleClick: boolean;
+	private _expandOnlyOnTwistieClick: boolean;
 	private _useAltAsMultipleSelectionModifier: boolean;
 
 	constructor(
@@ -472,6 +484,7 @@ export class WorkbenchTree extends Tree {
 		this.listMultiSelection = WorkbenchListMultiSelection.bindTo(this.contextKeyService);
 
 		this._openOnSingleClick = useSingleClickToOpen(configurationService);
+		this._expandOnlyOnTwistieClick = clickTwistieToOpen(configurationService);
 		this._useAltAsMultipleSelectionModifier = useAltAsMultipleSelectionModifier(configurationService);
 
 		this.disposables.push(
@@ -500,7 +513,9 @@ export class WorkbenchTree extends Tree {
 			if (e.affectsConfiguration(openModeSettingKey)) {
 				this._openOnSingleClick = useSingleClickToOpen(configurationService);
 			}
-
+			if (e.affectsConfiguration(treeTwistieExpandKey)) {
+				this._expandOnlyOnTwistieClick = clickTwistieToOpen(configurationService);
+			}
 			if (e.affectsConfiguration(multiSelectModifierSettingKey)) {
 				this._useAltAsMultipleSelectionModifier = useAltAsMultipleSelectionModifier(configurationService);
 			}
@@ -509,6 +524,10 @@ export class WorkbenchTree extends Tree {
 
 	get openOnSingleClick(): boolean {
 		return this._openOnSingleClick;
+	}
+
+	get expandOnlyOnTwistieClick(): boolean {
+		return this._expandOnlyOnTwistieClick;
 	}
 
 	get useAltAsMultipleSelectionModifier(): boolean {
@@ -555,6 +574,10 @@ export class WorkbenchTreeController extends DefaultController {
 			this.setOpenMode(this.getOpenModeSetting());
 			this.registerListeners();
 		}
+		if (isUndefinedOrNull(options.expandOnlyOnTwistieClick)) {
+			this.setExpandOnlyOnTwistieClick(this.getExpandOnlyOnTwistieClickSetting());
+			this.registerListeners();
+		}
 	}
 
 	private registerListeners(): void {
@@ -562,11 +585,18 @@ export class WorkbenchTreeController extends DefaultController {
 			if (e.affectsConfiguration(openModeSettingKey)) {
 				this.setOpenMode(this.getOpenModeSetting());
 			}
+			if (e.affectsConfiguration(treeTwistieExpandKey)) {
+				this.setExpandOnlyOnTwistieClick(this.getExpandOnlyOnTwistieClickSetting());
+			}
 		}));
 	}
 
 	private getOpenModeSetting(): OpenMode {
 		return useSingleClickToOpen(this.configurationService) ? OpenMode.SINGLE_CLICK : OpenMode.DOUBLE_CLICK;
+	}
+
+	private getExpandOnlyOnTwistieClickSetting(): boolean {
+		return clickTwistieToOpen(this.configurationService);
 	}
 
 	dispose(): void {
@@ -674,7 +704,7 @@ export class TreeResourceNavigator<T, TFilterData> extends Disposable {
 			!!(<SelectionKeyboardEvent>e.browserEvent).preserveFocus :
 			!isDoubleClick;
 
-		if (this.tree.openOnSingleClick || isDoubleClick || isKeyboardEvent) {
+		if ((this.tree.openOnSingleClick || isDoubleClick) && !this.tree.expandOnlyOnTwistieClick || isKeyboardEvent) {
 			const sideBySide = e.browserEvent instanceof MouseEvent && (e.browserEvent.ctrlKey || e.browserEvent.metaKey || e.browserEvent.altKey);
 			this.open(preserveFocus, isDoubleClick || isMiddleClick, sideBySide, e.browserEvent);
 		}
@@ -1004,6 +1034,9 @@ class WorkbenchTreeInternals<TInput, T, TFilterData> {
 				if (e.affectsConfiguration(openModeSettingKey)) {
 					tree.updateOptions({ openOnSingleClick: useSingleClickToOpen(configurationService) });
 				}
+				if (e.affectsConfiguration(treeTwistieExpandKey)) {
+					tree.updateOptions({ expandOnlyOnTwistieClick: clickTwistieToOpen(configurationService) });
+				}
 				if (e.affectsConfiguration(multiSelectModifierSettingKey)) {
 					this._useAltAsMultipleSelectionModifier = useAltAsMultipleSelectionModifier(configurationService);
 				}
@@ -1119,10 +1152,10 @@ configurationRegistry.registerConfiguration({
 			'default': true,
 			markdownDescription: localize('automatic keyboard navigation setting', "Controls whether keyboard navigation in lists and trees is automatically triggered simply by typing. If set to `false`, keyboard navigation is only triggered when executing the `list.toggleKeyboardNavigation` command, for which you can assign a keyboard shortcut.")
 		},
-		'workbench.tree.onlyExpandOnTwistieClick': {
+		[treeTwistieExpandKey]: {
 			'type': 'boolean',
 			'default': false,
-			'description': localize('tree onlyExpandOnTwistieClick setting', 'Controls whether to only expand a directory when the twistie is clicked inside the file tree.')
+			'description': localize('tree expandOnlyOnTwistieClick setting', 'Controls whether to only expand a directory when the twistie is clicked inside the file tree.')
 		}
 	}
 });
